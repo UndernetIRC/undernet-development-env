@@ -1,0 +1,9 @@
+[submodule "gnuworld"]
+	path = gnuworld
+	url = https://github.com/UndernetIRC/gnuworld.git
+[submodule "ircu2"]
+	path = ircu2
+	url = https://github.com/UndernetIRC/ircu2.git
+[submodule "cservice-web"]
+	path = cservice-web
+	url = https://github.com/UndernetIRC/cservice-web.git
