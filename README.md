@@ -26,7 +26,7 @@ up and running.
 
 ```
 git clone https://github.com/Ratler/undernet-development-env.git
-cd undernet-development.env
+cd undernet-development-env
 git submodule init
 git submodule update
 docker-compose up
