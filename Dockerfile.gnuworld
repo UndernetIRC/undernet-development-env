@@ -1,0 +1,58 @@
+FROM alpine:3.17 AS build
+
+RUN apk --no-cache update &&  \
+    apk --no-cache upgrade && \
+    apk --no-cache add \
+    build-base \
+    autoconf \
+    automake \
+    libtool \
+    pkgconfig \
+    check-dev \
+    file \
+    bison \
+    patch \
+    postgresql12-dev \
+    log4cplus-dev
+
+COPY ./gnuworld /src
+COPY ./patches /patches
+
+#RUN ls /src
+RUN cd /src && patch -p0 < /patches/log4c-alpine-compat+log-paths.patch
+RUN cd /src && \
+    ./configure \
+    --prefix=/gnuworld \
+    --enable-modules=cservice,ccontrol,openchanfix,dronescan \
+    --enable-ltdl-convenience \
+    --with-log4cplus \
+    --with-log4cplus-lib=/usr/lib \
+    --with-log4cplus-include=/usr/include && \
+    make && \
+    make install
+
+FROM alpine:3.17
+MAINTAINER ratler@undernet.org
+
+EXPOSE 4400/tcp 6667/tcp 6669/tcp
+
+RUN apk --no-cache update && \
+    apk --no-cache upgrade && \
+    apk --no-cache add \
+    libtool \
+    postgresql12 \
+    strace \
+    bind-tools \
+    log4cplus
+
+RUN addgroup -S gnuworld && \
+    adduser -D -S -s /sbin/nologin -G gnuworld gnuworld
+
+COPY --from=build /gnuworld /gnuworld
+
+RUN install -o gnuworld -g gnuworld -dm755 /gnuworld/log
+#RUN chown -R ircd:ircd /ircd/lib
+
+USER gnuworld
+WORKDIR /gnuworld/bin
+ENTRYPOINT ["./gnuworld", "-c", "-f", "/gnuworld/etc/gnuworld.conf"]

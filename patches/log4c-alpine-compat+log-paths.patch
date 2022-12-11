@@ -1,0 +1,42 @@
+diff --git src/main.cc src/main.cc
+index 00fd8474..81d05797 100644
+--- src/main.cc
++++ src/main.cc
+@@ -50,6 +50,7 @@
+ #ifdef ENABLE_LOG4CPLUS
+ #include <log4cplus/configurator.h>
+ #include <log4cplus/logger.h>
++#include <log4cplus/initializer.h>
+ #endif
+ 
+ // main() must be in the global namespace
+@@ -188,7 +189,7 @@ while( autoConnect )
+ 	// TODO: This will have to be updated when running
+ 	// in background.
+ 	{
+-	std::ofstream pidFile( "gnuworld.pid", std::ios::trunc | 
++	std::ofstream pidFile( "/gnuworld/log/gnuworld.pid", std::ios::trunc |
+ 				std::ios::out ) ;
+ 	if( !pidFile )
+ 		{
+@@ -224,8 +225,8 @@ return 0 ;
+ 
+ xServer::xServer( int argc, char** argv )
+  : eventList( EVT_NOOP ),
+-   elogFileName( "debug.log" ),
+-   socketFileName( "socket.log" ),
++   elogFileName( "/gnuworld/log/debug.log" ),
++   socketFileName( "/gnuworld/log/socket.log" ),
+    configFileName( CONFFILE )
+ {
+ logSocket = true ;
+@@ -234,7 +235,8 @@ doDebug = true ;
+ 
+ std::cout << "Before configuration" << endl; 
+ #ifdef ENABLE_LOG4CPLUS
+-log4cplus::PropertyConfigurator::doConfigure("logging.properties");
++log4cplus::Initializer initializer;
++log4cplus::PropertyConfigurator::doConfigure("/gnuworld/etc/logging.properties");
+ #endif
+ 
+ optind = 0 ;

@@ -1,0 +1,115 @@
+version: "3"
+services:
+  hub:
+    image: ircu2:latest
+    hostname: hub.undernet.org
+    build:
+      context: ircu2
+      dockerfile: ../Dockerfile.ircu2
+    ports:
+      - "4400:4400"
+      - "6669:6669"
+    volumes:
+      - ./etc/hub.conf:/ircd/etc/ircd.conf
+    networks:
+      undernet:
+        ipv4_address: 10.5.0.10
+
+  leaf:
+    image: ircu2:latest
+    hostname: leaf.undernet.org
+    ports:
+      - "4401:4400"
+      - "6667:6667"
+    volumes:
+      - ./etc/leaf.conf:/ircd/etc/ircd.conf
+    depends_on:
+      - hub
+    networks:
+      undernet:
+        ipv4_address: 10.5.0.20
+
+  db:
+    image: postgres:11-alpine
+    hostname: db.undernet.org
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./dbinit:/docker-entrypoint-initdb.d
+      - ./cservice-web:/cservice-web
+      - ./gnuworld:/gnuworld
+    environment:
+      - POSTGRES_USER=cservice
+      - POSTGRES_PASSWORD=cservice
+      - POSTGRES_INITDB_ARGS="-E SQL_ASCII"
+      - LANG=C
+    networks:
+      undernet:
+        ipv4_address: 10.5.0.30
+
+  mail:
+    image: ajoergensen/mailhog
+    hostname: mail.undernet.org
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      undernet:
+        ipv4_address: 10.5.0.40
+
+  web:
+    build:
+      context: ./cservice-web
+    ports:
+      - "8080:80"
+    environment:
+      - PHP_SHORT_OPEN_TAG=On
+      - APACHE_ERRORLOG=/dev/stderr
+      - LOCALDB_USER=cservice
+      - LOCALDB_PASS=cservice
+      - LOCALDB_HOST=db.undernet.org
+      - REMOTEDB_NAME=cservice
+      - REMOTEDB_USER=cservice
+      - REMOTEDB_PASS=cservice
+      - REMOTEDB_HOST=db.undernet.org
+      - ENABLE_REGISTER_GLOBALS=1
+      - LOG_LEVEL=Logger::DEBUG
+      - LOG_STREAM_HANDLER=php://stdout
+      - SMTPHOST=mail.undernet.org:1025
+    volumes:
+      - ./cservice-web:/app
+    networks:
+      undernet:
+        ipv4_address: 10.5.0.50
+    depends_on:
+      - db
+      - mail
+
+  gnuworld:
+    image: gnuworld:latest
+    hostname: channels.undernet.org
+    #entrypoint: /bin/sh -c "while true; do sleep 1; done"
+    build:
+      context: .
+      dockerfile: Dockerfile.gnuworld
+    volumes:
+      - ./etc/gnuworld:/gnuworld/etc
+    networks:
+      undernet:
+        ipv4_address: 10.5.0.60
+    depends_on:
+      - db
+      - hub
+
+volumes:
+  pgdata:
+
+networks:
+  undernet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+          gateway: 10.5.0.1
