@@ -18,6 +18,19 @@ It includes the following services:
 - docker
 - docker-compose
 
+# Getting started
+
+This project uses git submodules. After cloning this repository the submodules needs to be
+initialized and updated. Follow this step-by-step guide to get your new UnderNET environment 
+up and running.
+
+```
+git clone https://github.com/Ratler/undernet-development-env.git
+cd undernet-development.env
+git submodule init
+git submodule update
+docker-compose up
+```
 
 # FAQ
 Q: Why do I see this message _"X (cservice@undernet.org): AUTHENTICATION FAILED as <user> 
