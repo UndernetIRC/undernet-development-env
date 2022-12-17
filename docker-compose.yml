@@ -11,6 +11,7 @@ services:
       - "6669:6669"
     volumes:
       - ./etc/hub.conf:/ircd/etc/ircd.conf
+      - ./etc/hub.motd:/ircd/etc/motd
     networks:
       undernet:
         ipv4_address: 10.5.0.10
@@ -23,6 +24,7 @@ services:
       - "6667:6667"
     volumes:
       - ./etc/leaf.conf:/ircd/etc/ircd.conf
+      - ./etc/leaf.motd:/ircd/etc/motd
     depends_on:
       - hub
     networks:
