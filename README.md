@@ -54,7 +54,7 @@ is reflected in the container immediately. For example after changing `etc/hub.c
 `/rehash` the IRC server to apply the changes.
 
 For the service `cservice-web` the configuration can be changed from `cservice-web/php_includes`. Any configuration
-or change in an of the PHP files will be applied immediately.
+or code change will be applied immediately.
 
 # Making code changes in ircu or gnuworld
 
