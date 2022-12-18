@@ -80,4 +80,5 @@ Q: Why do I see this message _"X (cservice@undernet.org): AUTHENTICATION FAILED 
    authenticate with `x@channels.undernet.org`?
 
 A: This is a burst connection mechanism in GNUworld which happen when it links to its hub. 
-   Just wait for it to complete and try again.
+   Just wait for it to complete and try again. Or you can change the setting `login_delay` in
+   `etc/gnuworld/cservice.conf`, it's currently set to 5 seconds.
