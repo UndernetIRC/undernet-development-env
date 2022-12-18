@@ -73,6 +73,14 @@ docker-compose build gnuworld
 docker-compose restart gnuworld
 ```
 
+# PostgreSQL databases
+
+## Data persistence
+
+All databases are persisted by using a docker volume. To list existing volumes  run `docker volume ls`. 
+To reset all databases you can delete the volume by running `docker volume rm undernet-development-env_pgdata`,
+and then restart the `db` service to recreate all databases.
+
 
 # FAQ
 Q: Why do I see this message _"X (cservice@undernet.org): AUTHENTICATION FAILED as <user> 
@@ -82,3 +90,9 @@ Q: Why do I see this message _"X (cservice@undernet.org): AUTHENTICATION FAILED 
 A: This is a burst connection mechanism in GNUworld which happen when it links to its hub. 
    Just wait for it to complete and try again. Or you can change the setting `login_delay` in
    `etc/gnuworld/cservice.conf`, it's currently set to 5 seconds.
+
+Q: Why am I getting _"X (cservice@undernet.org): AUTHENTICATION FAILED as Admin (IPR)"_ when I try to
+   authenticate with the `x@channels.undernet.org` with the `Admin` user?
+
+A: Access IP restrictions are applied to the Admin user, to fix this, login to the `cservice-web`, and
+   change `Access IP restrictions (ACL+)` by adding the ip address `10.5.0.1`.
