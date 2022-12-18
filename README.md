@@ -1,7 +1,8 @@
 UnderNET Development Environment
 ================================
 > **Warning**
-> Do NOT use this in production, it is not safe and contains publicly shared credentials! 
+> 
+> Do _**NOT**_ use this in production, it is not safe and contains publicly shared credentials! 
 
 This repository contain a docker based development environment for UnderNET.
 
