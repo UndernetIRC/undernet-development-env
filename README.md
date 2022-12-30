@@ -65,15 +65,13 @@ After making any code change in either ircu or gnuworld the container need to be
 
 Rebuild ircu (hub and leaf share the same image):
 ```
-docker-compose build hub
-docker-compose restart hub
-docker-compose restart leaf
+docker-compose up --build hub
+docker-compose up leaf
 ```
 
 Rebuild and restart gnuworld:
 ```
-docker-compose build gnuworld
-docker-compose restart gnuworld
+docker-compose up --build gnuworld
 ```
 
 # PostgreSQL databases
