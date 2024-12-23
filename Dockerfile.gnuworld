@@ -13,7 +13,9 @@ RUN apk --no-cache update &&  \
     bison \
     patch \
     postgresql12-dev \
-    log4cplus-dev
+    log4cplus-dev \
+    oath-toolkit-dev \
+    oath-toolkit-liboath
 
 COPY ./gnuworld /src
 COPY ./patches /patches
@@ -27,12 +29,12 @@ RUN cd /src && \
     --enable-ltdl-convenience \
     --with-log4cplus \
     --with-log4cplus-lib=/usr/lib \
-    --with-log4cplus-include=/usr/include && \
+    --with-log4cplus-include=/usr/include \
+    --with-liboath-lib=/usr/lib && \ 
     make && \
     make install
 
 FROM alpine:3.17
-MAINTAINER ratler@undernet.org
 
 EXPOSE 4400/tcp 6667/tcp 6669/tcp
 
@@ -43,7 +45,8 @@ RUN apk --no-cache update && \
     postgresql12 \
     strace \
     bind-tools \
-    log4cplus
+    log4cplus \
+    oath-toolkit-liboath
 
 RUN addgroup -S gnuworld && \
     adduser -D -S -s /sbin/nologin -G gnuworld gnuworld
