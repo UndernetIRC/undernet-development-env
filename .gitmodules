@@ -7,3 +7,6 @@
 [submodule "cservice-web"]
 	path = cservice-web
 	url = https://github.com/UndernetIRC/cservice-web.git
+[submodule "cservice-api"]
+	path = cservice-api
+	url = https://github.com/UndernetIRC/cservice-api
