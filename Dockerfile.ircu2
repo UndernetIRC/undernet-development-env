@@ -1,27 +1,27 @@
-FROM alpine:3.17 AS build
+FROM alpine:3.21 AS build
 
 RUN apk --no-cache update &&  \
-    apk --no-cache upgrade && \
-    apk --no-cache add \
-    build-base \
-    autoconf \
-    automake \
-    libtool \
-    pkgconfig \
-    check-dev \
-    file \
-    bison
+  apk --no-cache upgrade && \
+  apk --no-cache add \
+  build-base \
+  autoconf \
+  automake \
+  libtool \
+  pkgconfig \
+  check-dev \
+  file \
+  bison
 
 COPY . /src
 
 RUN cd /src && \
-    ./configure --build="$(arch)-unknown-linux-gnu" \
-    --prefix=/ircd \
-    --with-cpath=/ircd/etc/ircd.conf \
-    --with-maxcon=1024 && \
-    make && \
-    make install && \
-    chmod 711 /ircd/bin/umkpasswd
+  ./configure --build="$(arch)-unknown-linux-gnu" \
+  --prefix=/ircd \
+  --with-cpath=/ircd/etc/ircd.conf \
+  --with-maxcon=1024 && \
+  make && \
+  make install && \
+  chmod 711 /ircd/bin/umkpasswd
 
 CMD /bin/sh
 
@@ -31,10 +31,10 @@ MAINTAINER ratler@undernet.org
 EXPOSE 4400/tcp 6667/tcp 6669/tcp
 
 RUN apk --no-cache update && \
-    apk --no-cache upgrade
+  apk --no-cache upgrade
 
 RUN addgroup -S ircd && \
-    adduser -D -S -s /sbin/nologin -G ircd ircd
+  adduser -D -S -s /sbin/nologin -G ircd ircd
 
 COPY --from=build /ircd /ircd
 

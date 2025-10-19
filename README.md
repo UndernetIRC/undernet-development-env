@@ -11,8 +11,10 @@ It includes the following services:
 - hub (ircu2)
 - leaf server (ircu2)
 - PostgreSQL database
-- mail server (mailhog)
+- Redis (Valkey) for caching and session management
+- mail server (Mailpit)
 - cservice web portal
+- cservice API (REST API for cservice)
 - GNUworld (enabled modules: cservice, ccontrol, openchanfix, dronescan)
 
 
@@ -25,8 +27,19 @@ It includes the following services:
 # Getting started
 
 This project uses git submodules. After cloning this repository the submodules needs to be
-initialized and updated. Follow this step-by-step guide to get your new UnderNET environment 
+initialized and updated. Follow this step-by-step guide to get your new UnderNET environment
 up and running.
+
+## Git Submodules
+
+This repository includes the following submodules:
+
+- `cservice-api/` - Go-based REST API server
+- `cservice-web/` - PHP web interface
+- `gnuworld/` - C++ service bot framework
+- `ircu2/` - IRC server implementation
+
+## Setup Steps
 
 ```
 git clone https://github.com/Ratler/undernet-development-env.git
@@ -45,8 +58,10 @@ The following ports below are mapped from your host to the container:
 | hub          | Server: localhost:4400 <br> Client: localhost:6669   | The default `/oper` username is `admin` with the password `admin`                                                                                                           |
 | leaf         | Server: localhost:4401 <br> Client: localhost:6667   | The default `/oper` username is `admin` with the password `admin`                                                                                                           |
 | db           | localhost:5432                                       | The default db username is `cservice` with the password `cservice`, works for all the databases. <br> Databases: `cservice`, `ccontrol`, `chanfix`, `dronescan`, `local_db` |
- | mail         | SMTP: localhost:1025 <br> WEB: http://localhost:8025 | Captures e-mails from cservice-web, <br>e-mails can be accessed from the WEB url.                                                                                           |
- | cservice-web | http://localhost:8080                                | Default admin (level 1000) user is `Admin` with the password `temPass2020@`                                                                                                 |
+| redis        | localhost:6379                                       | Valkey - used for caching and session management. No authentication required.                                                                                               |
+| mail         | SMTP: localhost:1025 <br> WEB: http://localhost:8025 | Mailpit - captures e-mails from cservice-web and cservice-api, <br>e-mails can be accessed from the WEB url.                                                                |
+| cservice-web | http://localhost:8080                                | Default admin (level 1000) user is `Admin` with the password `temPass2020@`                                                                                                 |
+| cservice-api | http://localhost:8081                                | REST API for cservice (JWT-based authentication). Health check available at `/health-check`                                                                                 |
 
 
 # Configuration
@@ -59,9 +74,9 @@ is reflected in the container immediately. For example after changing `etc/hub.c
 For the service `cservice-web` the configuration can be changed from `cservice-web/php_includes`. Any configuration
 or code change will be applied immediately.
 
-# Making code changes in ircu or gnuworld
+# Making code changes in ircu, gnuworld or cservice-api
 
-After making any code change in either ircu or gnuworld the container need to be rebuilt and restarted.
+After making any code change in ircu, gnuworld or cservice-api the container needs to be rebuilt and restarted.
 
 Rebuild ircu (hub and leaf share the same image):
 ```
@@ -73,6 +88,13 @@ Rebuild and restart gnuworld:
 ```
 docker-compose up --build gnuworld
 ```
+
+Rebuild and restart cservice-api:
+```
+docker-compose up --build api
+```
+
+For cservice-web, changes to configuration files in `cservice-web/php_includes` are reflected immediately without requiring a rebuild.
 
 # PostgreSQL databases
 
