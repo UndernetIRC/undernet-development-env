@@ -46,6 +46,12 @@ class Simulation:
             ch.name.lower() for ch in self.config.channels if ch.registered
         }
 
+        # Build per-user owned channel sets
+        owner_map: dict[str, set[str]] = {}
+        for ch in self.config.channels:
+            if ch.registered and ch.owner:
+                owner_map.setdefault(ch.owner, set()).add(ch.name.lower())
+
         # Create clients
         for user in self.config.users:
             client = SimIRCClient(
@@ -54,6 +60,7 @@ class Simulation:
                 port=self.config.port,
                 channels=user.channels,
                 registered_channels=registered_channels,
+                owned_channels=owner_map.get(user.username, set()),
             )
             self.clients.append(client)
             self.clients_by_nick[user.username.lower()] = client
