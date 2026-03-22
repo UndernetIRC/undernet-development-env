@@ -8,13 +8,15 @@ RUN apt update && apt upgrade -y && apt install -y \
   liblog4cplus-2.0.5t64 \
   liblog4cplus-dev \
   pkgconf \
-  automake
+  automake \
+  libltdl-dev
 
 COPY ./gnuworld /src
-COPY ./patches /patches
+#COPY ./patches /patches
 
-RUN cd /src && patch -p0 < /patches/log4c-alpine-compat+log-paths.patch
+#RUN cd /src && patch -p0 < /patches/log4c-alpine-compat+log-paths.patch
 RUN cd /src && \
+  ./autogen.sh && \
   ./configure \
   --prefix=/gnuworld \
   --enable-modules=cservice,ccontrol,openchanfix,dronescan \
@@ -36,11 +38,12 @@ RUN apt update && apt upgrade -y && apt install -y \
   liblog4cplus-2.0.5t64 \
   strace \
   bind9-utils \
-  liboath0t64
+  liboath0t64 \
+  libltdl7
 
 RUN groupadd -r gnuworld && useradd -r -s /usr/sbin/nologin -d /gnuworld -g gnuworld gnuworld
 
-COPY --from=build /gnuworld /gnuworld
+COPY --from=build --chown=gnuworld:gnuworld /gnuworld /gnuworld
 
 RUN install -o gnuworld -g gnuworld -dm755 /gnuworld/log
 
