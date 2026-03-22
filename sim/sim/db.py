@@ -159,8 +159,8 @@ def ensure_ccontrol_limits(db_url: str) -> None:
     Updates the iplisps table in the ccontrol database and clears any
     existing G-lines that may block simulator connections.
     """
-    # Derive ccontrol DB URL from cservice URL
-    ccontrol_url = db_url.replace("/cservice", "/ccontrol")
+    # Derive ccontrol DB URL by replacing the database name (last path segment)
+    ccontrol_url = db_url.rsplit("/", 1)[0] + "/ccontrol"
 
     print("Checking ccontrol connection limits...")
     conn = psycopg2.connect(ccontrol_url)
