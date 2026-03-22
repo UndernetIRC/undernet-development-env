@@ -10,7 +10,7 @@ import sys
 import click
 
 from sim.config import SimChannel, SimConfig, SimUser, load_config, save_config
-from sim.db import generate_password_hash, provision_all
+from sim.db import ensure_ccontrol_limits, generate_password_hash, provision_all
 from sim.simulation import Simulation
 
 
@@ -170,6 +170,8 @@ def build_config(
               help="IRC server hostname")
 @click.option("--port", default=6667, type=int, show_default=True,
               help="IRC server port")
+@click.option("--skip-db-limits", is_flag=True, default=False,
+              help="Skip checking/fixing ccontrol connection limits")
 def main(
     authenticated_users: int,
     unauthenticated_users: int,
@@ -183,6 +185,7 @@ def main(
     password: str,
     server: str,
     port: int,
+    skip_db_limits: bool,
 ) -> None:
     """UnderNET IRC Client Simulator.
 
@@ -212,6 +215,10 @@ def main(
     # Parse intervals
     chat_iv = parse_interval(chat_interval)
     action_iv = parse_interval(action_interval)
+
+    # Ensure ccontrol connection limits are adequate
+    if not skip_db_limits:
+        ensure_ccontrol_limits(db_url)
 
     # Load or create config
     if os.path.exists(config_path) and not force_recreate:

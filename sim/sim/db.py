@@ -150,6 +150,52 @@ def provision_levels(conn, config: SimConfig) -> None:
                           ch.name, user.username)
 
 
+MIN_CONN_LIMIT = 500
+
+
+def ensure_ccontrol_limits(db_url: str) -> None:
+    """Ensure ccontrol connection limits are high enough for simulation.
+
+    Updates the iplisps table in the ccontrol database and clears any
+    existing G-lines that may block simulator connections.
+    """
+    # Derive ccontrol DB URL from cservice URL
+    ccontrol_url = db_url.replace("/cservice", "/ccontrol")
+
+    print("Checking ccontrol connection limits...")
+    conn = psycopg2.connect(ccontrol_url)
+    try:
+        cur = conn.cursor()
+
+        # Check and update iplisps limits
+        cur.execute("SELECT name, maxlimit FROM iplisps WHERE maxlimit < %s", (MIN_CONN_LIMIT,))
+        low_limits = cur.fetchall()
+        if low_limits:
+            for name, limit in low_limits:
+                print(f"  Raising {name} maxlimit from {limit} to {MIN_CONN_LIMIT}")
+            cur.execute(
+                "UPDATE iplisps SET maxlimit = %s WHERE maxlimit < %s",
+                (MIN_CONN_LIMIT, MIN_CONN_LIMIT),
+            )
+        else:
+            print("  All iplisps limits OK")
+
+        # Clear any existing G-lines that could block us
+        cur.execute("SELECT count(*) FROM glines")
+        gline_count = cur.fetchone()[0]
+        if gline_count > 0:
+            cur.execute("DELETE FROM glines")
+            print(f"  Cleared {gline_count} G-line(s)")
+
+        conn.commit()
+        print("  ccontrol limits verified.")
+    except Exception as e:
+        conn.rollback()
+        print(f"  Warning: could not update ccontrol limits: {e}")
+    finally:
+        conn.close()
+
+
 def provision_all(db_url: str, config: SimConfig) -> SimConfig:
     print("Connecting to database...")
     conn = psycopg2.connect(db_url)
