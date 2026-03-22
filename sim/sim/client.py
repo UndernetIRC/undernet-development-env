@@ -11,6 +11,17 @@ from sim.config import SimUser
 
 logger = logging.getLogger("sim")
 
+# Shared reactor for all clients — avoids creating 100+ separate reactors
+_shared_reactor: irc.client_aio.AioReactor | None = None
+
+
+def get_shared_reactor() -> irc.client_aio.AioReactor:
+    global _shared_reactor
+    if _shared_reactor is None:
+        loop = asyncio.get_running_loop()
+        _shared_reactor = irc.client_aio.AioReactor(loop=loop)
+    return _shared_reactor
+
 
 class SimIRCClient:
     def __init__(self, user: SimUser, server: str, port: int, channels: list[str]):
@@ -22,23 +33,23 @@ class SimIRCClient:
         self.authenticated = False
         self.joined_channels: set[str] = set()
         self.is_opped: dict[str, bool] = {}
-        self.reactor: irc.client_aio.AioReactor | None = None
         self.connection: irc.client_aio.AioConnection | None = None
         self._login_event = asyncio.Event()
+        self._keepalive_task: asyncio.Task | None = None
 
     async def connect(self) -> None:
-        loop = asyncio.get_running_loop()
-        self.reactor = irc.client_aio.AioReactor(loop=loop)
-        self.connection = self.reactor.server()
+        reactor = get_shared_reactor()
+        self.connection = reactor.server()
 
-        # Register event handlers
-        self.reactor.add_global_handler("welcome", self._on_welcome)
-        self.reactor.add_global_handler("privnotice", self._on_notice)
-        self.reactor.add_global_handler("kick", self._on_kick)
-        self.reactor.add_global_handler("mode", self._on_mode)
-        self.reactor.add_global_handler("join", self._on_join)
-        self.reactor.add_global_handler("disconnect", self._on_disconnect)
-        self.reactor.add_global_handler("nicknameinuse", self._on_nick_in_use)
+        # Register per-connection event handlers on the shared reactor.
+        # We filter by connection in each handler to avoid cross-talk.
+        reactor.add_global_handler("welcome", self._on_welcome)
+        reactor.add_global_handler("privnotice", self._on_notice)
+        reactor.add_global_handler("kick", self._on_kick)
+        reactor.add_global_handler("mode", self._on_mode)
+        reactor.add_global_handler("join", self._on_join)
+        reactor.add_global_handler("disconnect", self._on_disconnect)
+        reactor.add_global_handler("nicknameinuse", self._on_nick_in_use)
 
         nick = self.user.username
         ident = self.user.username.replace("-", "")
@@ -53,10 +64,18 @@ class SimIRCClient:
             logger.error("[%s] Failed to connect: %s", nick, e)
             raise
 
+    def _is_mine(self, connection) -> bool:
+        return connection is self.connection
+
     def _on_welcome(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         self.connected = True
         logger.info("[%s] Received welcome from server", nick)
+
+        # Start client-side keepalive
+        self._keepalive_task = asyncio.ensure_future(self._keepalive_loop())
 
         if self.user.authenticated:
             login_msg = f"login {self.user.username} {self.user.password}"
@@ -66,7 +85,21 @@ class SimIRCClient:
             self._join_channels()
             self._login_event.set()
 
+    async def _keepalive_loop(self):
+        """Send periodic PINGs to keep the connection alive."""
+        while self.connected and self.connection:
+            try:
+                await asyncio.sleep(60)
+                if self.connected and self.connection:
+                    self.connection.ping("keepalive")
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                break
+
     def _on_notice(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         source = event.source or ""
         text = event.arguments[0] if event.arguments else ""
@@ -86,6 +119,8 @@ class SimIRCClient:
                 self._login_event.set()
 
     def _on_kick(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         channel = event.target
         kicked_nick = event.arguments[0] if event.arguments else ""
@@ -101,6 +136,8 @@ class SimIRCClient:
             loop.call_later(delay, lambda: connection.join(channel))
 
     def _on_mode(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         channel = event.target
 
@@ -130,6 +167,8 @@ class SimIRCClient:
                     target_idx += 1
 
     def _on_join(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         joiner = irc.client.NickMask(event.source).nick if event.source else ""
         channel = event.target
@@ -139,14 +178,21 @@ class SimIRCClient:
             logger.info("[%s] Joined %s", nick, channel)
 
     def _on_disconnect(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         self.connected = False
         self.authenticated = False
         self.joined_channels.clear()
         self.is_opped.clear()
+        if self._keepalive_task:
+            self._keepalive_task.cancel()
+            self._keepalive_task = None
         logger.info("[%s] Disconnected", nick)
 
     def _on_nick_in_use(self, connection, event):
+        if not self._is_mine(connection):
+            return
         nick = self.user.username
         new_nick = nick + "_"
         logger.warning("[%s] Nick in use, trying %s", nick, new_nick)
@@ -179,6 +225,9 @@ class SimIRCClient:
             self.connection.kick(channel, target, reason)
 
     def disconnect(self) -> None:
+        if self._keepalive_task:
+            self._keepalive_task.cancel()
+            self._keepalive_task = None
         if self.connection:
             try:
                 self.connection.disconnect("Simulator shutting down")

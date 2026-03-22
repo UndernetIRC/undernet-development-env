@@ -5,6 +5,7 @@ import logging
 import random
 import signal
 
+import sim.client as client_mod
 from sim.client import SimIRCClient
 from sim.config import SimConfig
 from sim.words import generate_message
@@ -157,6 +158,8 @@ class Simulation:
                 client.disconnect()
                 count += 1
 
+        # Reset shared reactor for clean state
+        client_mod._shared_reactor = None
         logger.info("Simulation stopped. %d clients disconnected.", count)
 
     async def run(self) -> None:
