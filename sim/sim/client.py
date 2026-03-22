@@ -52,6 +52,7 @@ class SimIRCClient:
         reactor.add_global_handler("kick", self._on_kick)
         reactor.add_global_handler("mode", self._on_mode)
         reactor.add_global_handler("join", self._on_join)
+        reactor.add_global_handler("namreply", self._on_namreply)
         reactor.add_global_handler("disconnect", self._on_disconnect)
         reactor.add_global_handler("nicknameinuse", self._on_nick_in_use)
 
@@ -174,6 +175,27 @@ class SimIRCClient:
                                     nick, source_nick, prefix, char, channel)
                 else:
                     target_idx += 1
+
+    def _on_namreply(self, connection, event):
+        if not self._is_mine(connection):
+            return
+        nick = self.user.username
+        # args = ['=', '#channel', '@nick1 nick2 +nick3 ...']
+        if len(event.arguments) < 3:
+            return
+        channel = event.arguments[1]
+        names = event.arguments[2].split()
+        for name in names:
+            # Strip prefix: @ = op, + = voice
+            if name.startswith("@"):
+                clean_nick = name[1:]
+            elif name.startswith("+"):
+                clean_nick = name[1:]
+            else:
+                clean_nick = name
+            if clean_nick.lower() == nick.lower() and name.startswith("@"):
+                self.is_opped[channel] = True
+                logger.info("[%s] Has ops in %s (from NAMES)", nick, channel)
 
     def _on_join(self, connection, event):
         if not self._is_mine(connection):
