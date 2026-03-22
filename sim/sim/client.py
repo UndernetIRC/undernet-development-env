@@ -183,13 +183,19 @@ class SimIRCClient:
             self.joined_channels.add(channel)
             logger.info("[%s] Joined %s", nick, channel)
             if self.authenticated and channel.lower() in self.registered_channels:
+                loop = asyncio.get_running_loop()
+                delay = 0.0
                 # If we're the owner, ask X to join the channel first (in case it's not there)
                 if channel.lower() in self.owned_channels:
                     connection.privmsg("X@channels.undernet.org", f"join {channel}")
                     logger.info("[%s] Asked X to join %s", nick, channel)
-                # Request ops from X
-                connection.privmsg("X@channels.undernet.org", f"op {channel}")
-                logger.info("[%s] Requested ops from X on %s", nick, channel)
+                    delay = 2.0  # wait for X to join before requesting ops
+                # Request ops from X (delayed to avoid flood protection)
+                def _request_op(ch=channel, n=nick):
+                    if self.connected and self.connection:
+                        self.connection.privmsg("X@channels.undernet.org", f"op {ch}")
+                        logger.info("[%s] Requested ops from X on %s", n, ch)
+                loop.call_later(delay, _request_op)
 
     def _on_disconnect(self, connection, event):
         if not self._is_mine(connection):

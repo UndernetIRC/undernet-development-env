@@ -102,36 +102,44 @@ def provision_channels(conn, config: SimConfig) -> SimConfig:
     return config
 
 
+# gnuworld level flag for auto-op on join
+F_LEVEL_AUTOOP = 0x01
+
+
 def _ensure_level(cur, channel_id: int, user_id: int, access: int,
-                  channel_name: str, username: str) -> None:
+                  channel_name: str, username: str, autoop: bool = False) -> None:
+    level_flags = F_LEVEL_AUTOOP if autoop else 0
     cur.execute(
-        "SELECT access FROM levels WHERE channel_id = %s AND user_id = %s AND deleted = 0",
+        "SELECT access, flags FROM levels WHERE channel_id = %s AND user_id = %s AND deleted = 0",
         (channel_id, user_id),
     )
     row = cur.fetchone()
     if row:
-        if row[0] == access:
-            print(f"  Level {access} already set for {username} on {channel_name}")
-        else:
+        existing_access, existing_flags = row
+        need_update = existing_access != access or (autoop and not (existing_flags & F_LEVEL_AUTOOP))
+        if need_update:
+            new_flags = existing_flags | F_LEVEL_AUTOOP if autoop else existing_flags
             cur.execute(
-                """UPDATE levels SET access = %s,
+                """UPDATE levels SET access = %s, flags = %s,
                    last_updated = extract(epoch from now())::int
                    WHERE channel_id = %s AND user_id = %s""",
-                (access, channel_id, user_id),
+                (access, new_flags, channel_id, user_id),
             )
-            print(f"  Updated level for {username} on {channel_name} to {access}")
+            print(f"  Updated level for {username} on {channel_name} to {access} (autoop={'on' if autoop else 'off'})")
+        else:
+            print(f"  Level {access} already set for {username} on {channel_name}")
     else:
         cur.execute(
             """INSERT INTO levels
                (channel_id, user_id, access, flags, added, added_by,
                 last_modif, last_modif_by, last_updated)
-               VALUES (%s, %s, %s, 0,
+               VALUES (%s, %s, %s, %s,
                        extract(epoch from now())::int, 'sim-setup',
                        extract(epoch from now())::int, 'sim-setup',
                        extract(epoch from now())::int)""",
-            (channel_id, user_id, access),
+            (channel_id, user_id, access, level_flags),
         )
-        print(f"  Set level {access} for {username} on {channel_name}")
+        print(f"  Set level {access} for {username} on {channel_name} (autoop={'on' if autoop else 'off'})")
 
 
 def provision_levels(conn, config: SimConfig) -> None:
@@ -148,9 +156,9 @@ def provision_levels(conn, config: SimConfig) -> None:
         if not owner or not owner.db_user_id or not channel.db_channel_id:
             continue
         _ensure_level(cur, channel.db_channel_id, owner.db_user_id, 500,
-                      channel.name, owner.username)
+                      channel.name, owner.username, autoop=True)
 
-    # Member levels (100)
+    # Member levels (100) - with autoop so X ops them on join
     for user in config.users:
         if user.role != "member" or not user.db_user_id:
             continue
@@ -159,7 +167,7 @@ def provision_levels(conn, config: SimConfig) -> None:
             if not ch or not ch.registered or not ch.db_channel_id:
                 continue
             _ensure_level(cur, ch.db_channel_id, user.db_user_id, 100,
-                          ch.name, user.username)
+                          ch.name, user.username, autoop=True)
 
 
 MIN_CONN_LIMIT = 500

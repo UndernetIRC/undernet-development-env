@@ -100,9 +100,15 @@ def build_config(
     for _ in range(roamer_count):
         user_idx += 1
         username = f"sim-{user_idx:03d}"
+        assigned = []
         # Join 1-2 random registered channels
-        n_channels = min(random.randint(1, 2), len(registered_ch_names)) if registered_ch_names else 0
-        assigned = random.sample(registered_ch_names, n_channels) if n_channels else []
+        if registered_ch_names:
+            n_reg = min(random.randint(1, 2), len(registered_ch_names))
+            assigned.extend(random.sample(registered_ch_names, n_reg))
+        # Also join 1-2 unregistered channels (they'll get opped as first joiners)
+        if unregistered_ch_names:
+            n_unreg = min(random.randint(1, 2), len(unregistered_ch_names))
+            assigned.extend(random.sample(unregistered_ch_names, n_unreg))
         user = SimUser(
             username=username,
             password=password,
