@@ -60,30 +60,42 @@ def provision_users(conn, config: SimConfig) -> SimConfig:
     return config
 
 
+# gnuworld channel flag that tells X to join the channel
+F_AUTOJOIN = 0x00200000
+
+
 def provision_channels(conn, config: SimConfig) -> SimConfig:
     cur = conn.cursor()
     for channel in config.channels:
         if not channel.registered:
             continue
         cur.execute(
-            "SELECT id FROM channels WHERE lower(name) = lower(%s)",
+            "SELECT id, flags FROM channels WHERE lower(name) = lower(%s)",
             (channel.name,),
         )
         row = cur.fetchone()
         if row:
             channel.db_channel_id = row[0]
+            existing_flags = row[1]
             print(f"  Reusing existing channel {channel.name} (id={row[0]})")
+            # Ensure AUTOJOIN flag is set so X joins the channel
+            if not (existing_flags & F_AUTOJOIN):
+                cur.execute(
+                    "UPDATE channels SET flags = flags | %s, last_updated = extract(epoch from now())::int WHERE id = %s",
+                    (F_AUTOJOIN, row[0]),
+                )
+                print(f"  Set AUTOJOIN flag on {channel.name}")
         else:
             cur.execute(
                 """INSERT INTO channels
                    (name, flags, registered_ts, channel_ts, channel_mode, last_updated)
-                   VALUES (%s, 0,
+                   VALUES (%s, %s,
                            extract(epoch from now())::int,
                            extract(epoch from now())::int,
                            '+nt',
                            extract(epoch from now())::int)
                    RETURNING id""",
-                (channel.name,),
+                (channel.name, F_AUTOJOIN),
             )
             channel.db_channel_id = cur.fetchone()[0]
             print(f"  Created channel {channel.name} (id={channel.db_channel_id})")
