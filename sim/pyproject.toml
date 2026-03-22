@@ -1,0 +1,32 @@
+[project]
+name = "undernet-sim"
+version = "0.1.0"
+description = "IRC client simulator for UnderNET development environment"
+readme = "README.md"
+authors = [
+    { name = "Stefan Wold", email = "ratler@undernet.org" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "irc",
+    "psycopg2-binary",
+    "click",
+]
+
+[project.scripts]
+undernet-sim = "sim.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
