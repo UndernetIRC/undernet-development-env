@@ -164,11 +164,14 @@ class SimIRCClient:
                 if target_idx < len(targets):
                     target = targets[target_idx]
                     target_idx += 1
-                    prefix = "+" if adding else "-"
-                    logger.info("[%s] %s sets %s%s %s on %s",
-                                nick, source_nick, prefix, char, target, channel)
+                    # Track our own op status
                     if target.lower() == nick.lower() and char == "o":
                         self.is_opped[channel] = adding
+                    # Only log from the target's perspective (avoids N duplicates)
+                    if target.lower() == nick.lower():
+                        prefix = "+" if adding else "-"
+                        logger.info("[%s] %s sets %s%s on %s",
+                                    nick, source_nick, prefix, char, channel)
                 else:
                     target_idx += 1
 
