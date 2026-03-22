@@ -83,6 +83,16 @@ The `sim-config.json` file contains the full simulation state. On subsequent run
 
 **Login failures**: gnuworld has a `login_delay` (default 5 seconds) after connecting to IRC before it accepts login commands. The simulator waits up to 30 seconds for authentication.
 
-**Too many connections refused**: Check that `etc/leaf.conf` has the `Simulation` connection class with `maxlinks = 500`. Restart the leaf server after config changes: `docker compose restart leaf`.
+**Too many connections refused / G-lined for excessive connections**: ccontrol (UWorld) enforces per-IP connection limits via the `iplisps` table in the ccontrol database. The default limit is 5 connections per IP. Increase it for simulation:
+
+```bash
+docker compose exec db psql -U cservice -d ccontrol \
+  -c "UPDATE iplisps SET maxlimit = 500 WHERE name = 'default32';"
+docker compose exec db psql -U cservice -d ccontrol \
+  -c "DELETE FROM glines;"
+docker compose restart hub leaf && sleep 3 && docker compose restart gnuworld
+```
+
+Also ensure `etc/leaf.conf` has `"IPCHECK"="FALSE"` in the features block and the `Simulation` connection class with `maxlinks = 500`.
 
 **Nick already in use**: If a previous simulation didn't shut down cleanly, nicks may still be registered on the server. Wait a minute for the server to time them out, or restart the leaf server.
