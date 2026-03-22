@@ -106,8 +106,6 @@ docker compose restart hub leaf && sleep 3 && docker compose restart gnuworld
 "IPCHECK_CLONE_DELAY"="0";
 ```
 
-Note: `"IPCHECK"="FALSE"` does NOT work — that feature doesn't exist in ircu2.
-
 **X not joining registered channels**: Channels need the `F_AUTOJOIN` flag (`0x00200000`) set. The simulator sets this automatically. If X still isn't in a channel, restart gnuworld after the first run: `docker compose restart gnuworld`.
 
 **Nick already in use**: If a previous simulation didn't shut down cleanly, nicks may still be registered on the server. Wait a minute for the server to time them out, or restart the leaf server.
