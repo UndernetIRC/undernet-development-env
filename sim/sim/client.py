@@ -27,7 +27,7 @@ class SimIRCClient:
         self._login_event = asyncio.Event()
 
     async def connect(self) -> None:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self.reactor = irc.client_aio.AioReactor(loop=loop)
         self.connection = self.reactor.server()
 
@@ -74,13 +74,15 @@ class SimIRCClient:
         # Check for X login response
         if "X!" in str(source) or "X@" in str(source):
             lower_text = text.lower()
-            if "authentication successful" in lower_text or self.user.username.lower() in lower_text:
+            if "authentication successful" in lower_text:
                 self.authenticated = True
                 logger.info("[%s] Authentication successful", nick)
                 self._join_channels()
                 self._login_event.set()
-            elif "authentication failed" in lower_text:
+            elif "authentication failed" in lower_text or "login failed" in lower_text:
                 logger.warning("[%s] Authentication failed: %s", nick, text)
+                # Still join channels even if auth failed
+                self._join_channels()
                 self._login_event.set()
 
     def _on_kick(self, connection, event):
@@ -95,7 +97,7 @@ class SimIRCClient:
             logger.info("[%s] Kicked from %s (%s), will rejoin", nick, channel, reason)
 
             delay = random.uniform(5, 15)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             loop.call_later(delay, lambda: connection.join(channel))
 
     def _on_mode(self, connection, event):

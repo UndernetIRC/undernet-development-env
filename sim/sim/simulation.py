@@ -160,7 +160,7 @@ class Simulation:
         logger.info("Simulation stopped. %d clients disconnected.", count)
 
     async def run(self) -> None:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         stop_event = asyncio.Event()
 
         def _signal_handler():
