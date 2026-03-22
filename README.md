@@ -96,6 +96,20 @@ docker-compose up --build api
 
 For cservice-web, changes to configuration files in `cservice-web/php_includes` are reflected immediately without requiring a rebuild.
 
+# IRC Client Simulator
+
+The `sim/` directory contains a Python-based IRC client simulator that can spin up many concurrent clients to generate realistic traffic on the development network. It provisions user accounts and channels directly in the database and simulates chat, channel operations (op/deop/voice/kick), and authentication with X.
+
+## Quick start
+
+```
+cd sim
+uv sync
+uv run undernet-sim --authenticated-users 20 --unauthenticated-users 10 --registered-channels 4 --unregistered-channels 5
+```
+
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+. See `sim/README.md` for full documentation and CLI options.
+
 # PostgreSQL databases
 
 ## Data persistence
