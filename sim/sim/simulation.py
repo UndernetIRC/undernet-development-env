@@ -58,7 +58,7 @@ class Simulation:
                 await client.connect()
             except Exception as e:
                 logger.error("[%s] Connection failed: %s", client.user.username, e)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.0)
 
         # Wait for all clients to be ready
         logger.info("Waiting for clients to be ready...")
