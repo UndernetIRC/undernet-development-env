@@ -41,6 +41,11 @@ class Simulation:
     async def start(self) -> None:
         self.running = True
 
+        # Build set of registered channel names (lowercased for matching)
+        registered_channels = {
+            ch.name.lower() for ch in self.config.channels if ch.registered
+        }
+
         # Create clients
         for user in self.config.users:
             client = SimIRCClient(
@@ -48,6 +53,7 @@ class Simulation:
                 server=self.config.server,
                 port=self.config.port,
                 channels=user.channels,
+                registered_channels=registered_channels,
             )
             self.clients.append(client)
             self.clients_by_nick[user.username.lower()] = client
@@ -55,11 +61,17 @@ class Simulation:
         # Stagger connections
         logger.info("Connecting %d clients...", len(self.clients))
         for client in self.clients:
+            if not self.running:
+                logger.info("Shutdown requested, stopping connections.")
+                break
             try:
                 await client.connect()
             except Exception as e:
                 logger.error("[%s] Connection failed: %s", client.user.username, e)
             await asyncio.sleep(1.0)
+
+        if not self.running:
+            return
 
         # Wait for all clients to be ready
         logger.info("Waiting for clients to be ready...")
@@ -168,12 +180,18 @@ class Simulation:
 
         def _signal_handler():
             logger.info("Received shutdown signal...")
+            self.running = False
             stop_event.set()
 
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, _signal_handler)
 
         await self.start()
+
+        if not self.running:
+            await self.stop()
+            return
+
         logger.info("Simulation running. Press Ctrl+C to stop.")
 
         await stop_event.wait()

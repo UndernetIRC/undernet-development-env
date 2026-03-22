@@ -24,11 +24,13 @@ def get_shared_reactor() -> irc.client_aio.AioReactor:
 
 
 class SimIRCClient:
-    def __init__(self, user: SimUser, server: str, port: int, channels: list[str]):
+    def __init__(self, user: SimUser, server: str, port: int, channels: list[str],
+                 registered_channels: set[str] | None = None):
         self.user = user
         self.server = server
         self.port = port
         self.channels = channels
+        self.registered_channels = registered_channels or set()
         self.connected = False
         self.authenticated = False
         self.joined_channels: set[str] = set()
@@ -176,6 +178,10 @@ class SimIRCClient:
         if joiner.lower() == nick.lower():
             self.joined_channels.add(channel)
             logger.info("[%s] Joined %s", nick, channel)
+            # Request ops from X on registered channels if authenticated
+            if self.authenticated and channel.lower() in self.registered_channels:
+                connection.privmsg("X@channels.undernet.org", f"op {channel}")
+                logger.info("[%s] Requested ops from X on %s", nick, channel)
 
     def _on_disconnect(self, connection, event):
         if not self._is_mine(connection):
