@@ -149,6 +149,8 @@ class SimIRCClient:
         modes = event.arguments[0] if event.arguments else ""
         targets = event.arguments[1:] if len(event.arguments) > 1 else []
 
+        source_nick = irc.client.NickMask(event.source).nick if event.source else "?"
+
         adding = True
         target_idx = 0
         for char in modes:
@@ -160,11 +162,11 @@ class SimIRCClient:
                 if target_idx < len(targets):
                     target = targets[target_idx]
                     target_idx += 1
-                    if target.lower() == nick.lower():
-                        if char == "o":
-                            self.is_opped[channel] = adding
-                            status = "opped" if adding else "deopped"
-                            logger.info("[%s] %s in %s", nick, status, channel)
+                    prefix = "+" if adding else "-"
+                    logger.info("[%s] %s sets %s%s %s on %s",
+                                nick, source_nick, prefix, char, target, channel)
+                    if target.lower() == nick.lower() and char == "o":
+                        self.is_opped[channel] = adding
                 else:
                     target_idx += 1
 
